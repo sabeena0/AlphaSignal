@@ -1,0 +1,11 @@
+{
+  "framework": "nextjs",
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 120
+    }
+  },
+  "env": {
+    "LLM_PROVIDER": "openai"
+  }
+}
