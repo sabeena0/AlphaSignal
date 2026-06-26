@@ -1,7 +1,6 @@
 import { ChatGroq } from "@langchain/groq";
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
-import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { JsonOutputParser } from "@langchain/core/output_parsers";
 import { RunnableSequence } from "@langchain/core/runnables";
@@ -93,13 +92,26 @@ async function runSearchTool(query: string): Promise<string> {
   if (!tavilyKey) return "No search API key configured.";
 
   try {
-    // Using LangChain's built-in TavilySearchResults tool
-    const searchTool = new TavilySearchResults({
-      maxResults: 4,
-      apiKey: tavilyKey,
+    const res = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: tavilyKey,
+        query,
+        search_depth: "basic",
+        max_results: 3,
+        include_answer: true,
+      }),
     });
-    const results = await searchTool.invoke(query);
-    return typeof results === "string" ? results : JSON.stringify(results);
+    const data = await res.json();
+    const answer = data.answer ? `Summary: ${data.answer}\n` : "";
+    const results = (data.results || [])
+      .slice(0, 3)
+      .map((r: { title: string; content: string }) =>
+        `- ${r.title}: ${r.content?.slice(0, 300)}`
+      )
+      .join("\n");
+    return `[Search: ${query}]\n${answer}${results}`;
   } catch (e) {
     return `Search failed: ${e instanceof Error ? e.message : String(e)}`;
   }
