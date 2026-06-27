@@ -2,19 +2,20 @@
 
 > Enter any company. The AI agent researches it using live web data and delivers a clear **INVEST / PASS / HOLD** verdict with scored analysis, financial snapshot, risks, and catalysts.
 
+🔗 **Live Demo:** https://alpha-signal-sigma.vercel.app/
+📦 **GitHub:** https://github.com/sabeena0/AlphaSignal
+
 ---
 
 ## Overview
 
-AlphaSignal is a full-stack AI investment research agent built with **Next.js**, **LangChain.js**, and your choice of LLM (Groq Llama 3.3, OpenAI GPT-4o, or Anthropic Claude).
+AlphaSignal is a full-stack AI investment research agent built with **Next.js**, **LangChain.js**, and Groq (Llama 3.3 70B). You type in a company name and the agent:
 
-You type in a company name. The agent:
-
-1. **Runs 4 parallel live web searches** using LangChain's `TavilySearchResults` tool — fetching latest financials, news, competitor data, and risk signals
-2. **Summarises the raw search data** using a LangChain `RunnableSequence` (Chain 1: PromptTemplate → LLM → StringOutputParser)
-3. **Synthesises a structured investment report** using a second LangChain chain (Chain 2: PromptTemplate → LLM → JsonOutputParser)
+1. **Runs 3 parallel live web searches** using Tavily — fetching latest financials, news, and competitor data
+2. **Summarises raw search data** using LangChain Chain 1: `PromptTemplate → LLM → StringOutputParser`
+3. **Synthesises a structured investment report** using LangChain Chain 2: `PromptTemplate → LLM → JsonOutputParser`
 4. **Delivers a verdict** — INVEST / PASS / HOLD — with a 0–100 confidence score, 6 scored dimensions, financial snapshot, risks, and catalysts
-5. **Streams progress** to the UI in real time via Server-Sent Events so you see each step complete live
+5. **Streams progress live** to the UI via Server-Sent Events
 
 ---
 
@@ -22,8 +23,8 @@ You type in a company name. The agent:
 
 ### Prerequisites
 - Node.js 18+
-- A Groq API key (free) — or OpenAI / Anthropic key
-- A Tavily API key (free, 1000 searches/month) — for live web search
+- Groq API key (free) — console.groq.com
+- Tavily API key (free, 1000 searches/month) — tavily.com
 
 ### Setup
 
@@ -47,20 +48,8 @@ npm run dev
 ### Environment Variables (`.env.local`)
 
 ```env
-# Choose your LLM provider: groq (recommended — free & fast), openai, or anthropic
 LLM_PROVIDER=groq
-
-# Groq — free, fast, no credit card needed (https://console.groq.com)
 GROQ_API_KEY=gsk_...
-
-# OpenAI (alternative)
-# OPENAI_API_KEY=sk-...
-# OPENAI_MODEL=gpt-4o-mini
-
-# Anthropic (alternative)
-# ANTHROPIC_API_KEY=sk-ant-...
-
-# Tavily — live web search (https://tavily.com, free tier: 1000 searches/month)
 TAVILY_API_KEY=tvly-...
 ```
 
@@ -71,17 +60,7 @@ TAVILY_API_KEY=tvly-...
 | Groq | console.groq.com → API Keys | 2 minutes |
 | Tavily | tavily.com → Sign up | 2 minutes |
 
-### Deploy to Vercel
 
-```bash
-npm install -g vercel
-vercel --prod
-# Add environment variables in Vercel dashboard → Project → Settings → Environment Variables
-```
-
-> **Note:** Vercel Pro plan required for `maxDuration = 120` on API routes. Hobby plan has a 10s timeout which is too short for AI research.
-
----
 
 ## How It Works — Architecture
 
@@ -89,168 +68,169 @@ vercel --prod
 User Input (company name)
         │
         ▼
-  POST /api/analyze                    Next.js API Route (SSE stream)
+  POST /api/analyze          Next.js API Route (SSE stream)
         │
         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    LangChain Pipeline                       │
-│                                                             │
-│  ┌─────────────────────────────────────────────┐           │
-│  │  STEP 1 — Parallel Web Research             │           │
-│  │  LangChain TavilySearchResults tool ×4      │           │
-│  │                                             │           │
-│  │  • financials: revenue, margins, metrics    │           │
-│  │  • news: earnings, analyst ratings          │           │
-│  │  • competitors: market share, landscape     │           │
-│  │  • risks: debt, fraud, legal, bankruptcy    │           │
-│  └──────────────────┬──────────────────────────┘           │
-│                     │ raw search results                    │
-│                     ▼                                       │
-│  ┌─────────────────────────────────────────────┐           │
-│  │  STEP 2 — Chain 1: Research Summariser      │           │
-│  │  RunnableSequence:                          │           │
-│  │  PromptTemplate → LLM → StringOutputParser  │           │
-│  │                                             │           │
-│  │  Condenses 4 search results into a          │           │
-│  │  structured research brief                  │           │
-│  └──────────────────┬──────────────────────────┘           │
-│                     │ research brief                        │
-│                     ▼                                       │
-│  ┌─────────────────────────────────────────────┐           │
-│  │  STEP 3 — Chain 2: Synthesis                │           │
-│  │  RunnableSequence:                          │           │
-│  │  PromptTemplate → LLM → JsonOutputParser    │           │
-│  │                                             │           │
-│  │  Generates structured InvestmentReport JSON │           │
-│  │  with verdict, scores, snapshot, risks      │           │
-│  └──────────────────┬──────────────────────────┘           │
-└─────────────────────┼───────────────────────────────────────┘
-                      │ InvestmentReport JSON
-                      ▼
-        SSE stream → Frontend React UI
-        (ScoreRing, ReportView, StepTracker)
+┌─────────────────────────────────────────────────────┐
+│              LangChain Pipeline                     │
+│                                                     │
+│  STEP 1 — Parallel Web Research (Tavily ×3)        │
+│  • financials: revenue, margins, metrics            │
+│  • news: earnings, analyst ratings, events          │
+│  • competitors: market share, landscape             │
+│                    │                                │
+│                    ▼                                │
+│  STEP 2 — Chain 1: Research Summariser             │
+│  RunnableSequence:                                  │
+│  PromptTemplate → LLM → StringOutputParser          │
+│  (raw search results → clean research brief)        │
+│                    │                                │
+│                    ▼                                │
+│  STEP 3 — Chain 2: Synthesis                       │
+│  RunnableSequence:                                  │
+│  PromptTemplate → LLM → JsonOutputParser            │
+│  (research brief → structured InvestmentReport)     │
+└─────────────────────────────────────────────────────┘
+        │
+        ▼
+  SSE stream → React UI
+  (ScoreRing, ReportView, StepTracker)
 ```
 
 ### LangChain Components Used
 
 | Component | Purpose |
 |---|---|
-| `TavilySearchResults` | Live web search tool — fetches real 2024/2025 data |
-| `PromptTemplate` | Structured, reusable prompt management |
-| `RunnableSequence` | Chains multiple steps into a pipeline |
-| `StringOutputParser` | Parses LLM text output in Chain 1 |
-| `JsonOutputParser` | Parses structured JSON output in Chain 2 |
+| `PromptTemplate` | Structured prompt management for both chains |
+| `RunnableSequence` | Chains steps into a pipeline |
+| `StringOutputParser` | Parses LLM text in Chain 1 |
+| `JsonOutputParser` | Parses structured JSON in Chain 2 |
 | `ChatGroq` | Groq LLM provider (Llama 3.3 70B) |
-| `ChatOpenAI` | OpenAI provider (GPT-4o / GPT-4o-mini) |
-| `ChatAnthropic` | Anthropic provider (Claude Sonnet) |
+| `ChatOpenAI` | OpenAI provider fallback |
+| `ChatAnthropic` | Anthropic provider fallback |
 
 ### Key Files
 
 | File | Purpose |
 |---|---|
-| `lib/agent.ts` | Core LangChain pipeline — tools, chains, parsers |
+| `lib/agent.ts` | Core LangChain pipeline — searches, chains, parsers |
 | `app/api/analyze/route.ts` | Streaming SSE API endpoint |
 | `app/page.tsx` | Main UI — idle / loading / done / error states |
-| `components/StepTracker.tsx` | Real-time step progress during research |
-| `components/ReportView.tsx` | Full report renderer with all sections |
-| `components/ScoreRing.tsx` | Animated SVG confidence score ring |
+| `components/StepTracker.tsx` | Real-time step progress |
+| `components/ReportView.tsx` | Full report renderer |
+| `components/ScoreRing.tsx` | Animated SVG confidence ring |
 
 ---
 
 ## Key Decisions & Trade-offs
 
-### LangChain chains over raw API calls
-Using `RunnableSequence` with `PromptTemplate` and output parsers makes the pipeline composable, testable, and easy to extend. Swapping the LLM provider is one line. Adding a new chain step is trivial. Raw `fetch()` calls would work but wouldn't be maintainable or extensible.
+### LangChain RunnableSequence over raw API calls
+Using `RunnableSequence` with `PromptTemplate` and output parsers makes the pipeline composable and easy to extend. Swapping the LLM provider is one env variable change.
 
-### Two-chain architecture (research → synthesis)
-Separating web search summarisation (Chain 1) from JSON synthesis (Chain 2) produces significantly better results than one giant prompt. Chain 1 is in "gather and summarise" mode; Chain 2 is in "structured analysis" mode. Mixing both into one prompt degrades quality on both dimensions.
+### Two-chain architecture
+Separating summarisation (Chain 1) from synthesis (Chain 2) produces better results. Chain 1 is in "gather and condense" mode; Chain 2 is in "structured analysis" mode. Mixing both degrades quality.
 
-### Groq as default LLM (Llama 3.3 70B)
-Groq is free, requires no credit card, and runs Llama 3.3 70B at ~500 tokens/second — making it 3-5x faster than OpenAI for the same output quality. Perfect for a demo. The provider abstraction means switching to GPT-4o or Claude is just changing one env variable.
+### Groq as default LLM
+Groq is free, requires no credit card, and runs Llama 3.3 70B at ~500 tokens/second — 3-5x faster than OpenAI for similar quality. The provider abstraction means switching to GPT-4o or Claude is one env variable.
 
 ### Parallel web searches
-All 4 Tavily searches run in `Promise.all()` — simultaneously, not sequentially. This cuts search time from ~8 seconds to ~2 seconds.
+All 3 Tavily searches run via `Promise.all()` simultaneously — cuts search time from ~9s to ~3s.
+
+### Timeout protection on all chains
+Each search has a 7s timeout, all searches have an 18s global timeout, Chain 1 has a 12s timeout with fallback to raw data. The agent never hangs — it always produces a report.
 
 ### Server-Sent Events for streaming
-SSE gives live step-by-step progress updates to the UI. A 25-second wait feels fast when you watch each step complete. Without streaming, users would stare at a blank spinner for 25 seconds.
+Live step-by-step progress updates make 30-second waits feel fast. Users see each step complete in real time.
 
 ### What I left out
-- **LangGraph state machine** — the original design used a full LangGraph graph with a tool-calling loop. Removed because it requires a search API to work and is harder to debug; the two-chain pipeline achieves the same result more reliably.
-- **Vector DB / RAG** — caching past reports in FAISS or Pinecone for instant re-queries.
-- **Portfolio tracking** — saving reports per user, comparing companies over time.
-- **Real-time price feeds** — WebSocket live prices for accurate valuation.
-- **Authentication** — no user accounts; stateless demo.
-- **Rate limiting** — no throttling on the API endpoint.
+- **LangGraph state machine** — original design used a full ReAct agent loop; simplified to a pipeline for reliability on Vercel Hobby plan
+- **Vector DB / RAG** — caching past reports in FAISS/Pinecone for instant re-queries
+- **Portfolio tracking** — saving reports per user, comparing companies
+- **Source citations** — showing which Tavily result each claim came from
+- **Rate limit handling** — detecting Groq 429 errors and showing friendly wait messages
+- **Authentication** — no user accounts; stateless demo
 
 ---
 
 ## Example Runs
 
-### Apple Inc — INVEST (Confidence: 87)
+### 1. Amazon — INVEST (Confidence: 85)
 
-**Verdict:** INVEST
+![Amazon Report](screenshots/amazon_report.png)
 
-**Thesis:** Apple maintains an exceptionally strong competitive moat through its tightly integrated hardware-software-services ecosystem. With $391B in FY2024 revenue and 46% gross margins, the Services segment growing at 13% YoY represents a high-margin, recurring revenue flywheel. The 2.2B+ device installed base creates enormous switching costs. At 32x P/E the valuation is full but justified by quality.
+**Verdict: INVEST** — Amazon's strong market position in e-commerce and cloud services, combined with $742.8B revenue (FY2026) and expanding operating margins of 5.4%, makes it an attractive investment opportunity. AWS continued growth and advertising business expansion are key catalysts.
 
-**Financial Snapshot:** Revenue $391B (FY2024) · Gross Margin 46.2% · Net Margin 26.4% · Market Cap $3.4T · FCF $108B
-
-**Key Risks:** iPhone concentration risk (52% of revenue), China manufacturing dependency, Services antitrust scrutiny, Vision Pro adoption uncertainty, slowing hardware upgrade cycles
-
----
-
-### WeWork — PASS (Confidence: 8)
-
-**Verdict:** PASS
-
-**Thesis:** WeWork filed for Chapter 11 bankruptcy in November 2023, making it uninvestable. The company accumulated over $18B in long-term lease obligations it could not service, with occupancy rates failing to recover post-COVID. The fundamental business model — long-term lease liabilities against short-term flexible memberships — was structurally broken.
-
-**Financial Snapshot:** Revenue $3.4B (FY2022) · Net Loss -$2.3B · Debt/Equity extremely negative · FCF deeply negative
-
-**Key Risks:** Bankruptcy filing Nov 2023, lease liability crisis, management credibility destroyed, brand severely damaged
+| Metric | Value |
+|---|---|
+| Revenue | $742.8B (FY2026) |
+| Revenue Growth | 16.3% YoY |
+| Gross Margin | 40.5% |
+| Net Margin | 5.4% |
+| P/E Ratio | 23.4x |
+| Market Cap | $1.23 trillion |
 
 ---
 
-### Reliance Industries — HOLD (Confidence: 64)
+### 2. Netflix — HOLD (Confidence: 60)
 
-**Verdict:** HOLD
+![Netflix Report](screenshots/netflix_report.png)
 
-**Thesis:** India's largest company by market cap with diversified revenue across O2C, Retail, and Jio Digital. Jio's 5G rollout and Retail expansion are strong long-term tailwinds. However, the ongoing high capex cycle suppresses near-term FCF, and the O2C segment faces global refining margin pressure. Fair-valued at current levels — wait for capex to peak.
+**Verdict: HOLD** — Netflix's strong financial performance ($45.2B revenue, 15.85% growth) and 282M+ subscribers are positives, but its premium P/E of 55.2x and high valuation relative to peers warrants caution. Content cost inflation and FX headwinds add uncertainty.
 
-**Financial Snapshot:** Revenue ₹10.2L Cr (FY2024) · EBITDA ₹1.8L Cr · Market Cap ₹19L Cr · D/E 0.4x
+| Metric | Value |
+|---|---|
+| Revenue | $45.2B (FY2025) |
+| Revenue Growth | 15.85% YoY |
+| Net Margin | 24.3% |
+| P/E Ratio | 55.2x |
+| Market Cap | $274.5B |
 
 ---
 
-### Byju's — PASS (Confidence: 4)
+### 3. Nvidia — INVEST (Confidence: 85)
 
-**Verdict:** PASS
+![Nvidia Report](screenshots/Nvidia_report.png)
 
-**Thesis:** Byju's represents one of India's most dramatic startup collapses. The company faces $1.2B loan default, auditor resignations, SEBI and ED investigations, and founder control controversy. Revenue recognition irregularities and mounting losses make this uninvestable at any price until governance, cash flow, and regulatory standing are fully restored — which appears unlikely in the near term.
+**Verdict: INVEST** — Nvidia's dominance in the AI chip market, with 114.2% revenue growth (FY2024→FY2025) to $130.5B, 60% gross margins, and 70-95% market share in AI training chips makes it the defining infrastructure play of the AI era. At 35x P/E, valuation is full but justified.
 
-**Key Risks:** Criminal investigations, lender disputes, talent exodus, brand collapse, potential insolvency
+| Metric | Value |
+|---|---|
+| Revenue | $130.5B (FY2025) |
+| Revenue Growth | 114.2% YoY |
+| Gross Margin | 60% |
+| Net Margin | 20% |
+| P/E Ratio | 35x |
+| Market Cap | $1.3 trillion |
+
+---
+
+### 4. WeWork — PASS (Confidence: 20)
+
+![WeWork Report](screenshots/Wework_report.png)
+
+**Verdict: PASS** — WeWork filed Chapter 11 bankruptcy in 2023 due to deep losses and unsustainable lease liabilities. While the company has achieved EBITDA profitability for six consecutive months post-restructuring, its history of governance failure, brand damage, and structural business model weaknesses make it uninvestable at this stage.
+
+| Metric | Value |
+|---|---|
+| Revenue | $3.33B (2025) |
+| Business Model Score | 3/10 |
+| Competitive Moat | Weak |
+| Overall Score | 4.5/10 |
 
 ---
 
 ## What I Would Improve With More Time
 
-1. **Restore LangGraph state machine** — a proper ReAct agent that dynamically decides how many searches to run and can follow up on findings (e.g. if it finds the company is bankrupt, it searches specifically for bankruptcy details).
-
-2. **Persistent report caching** — store reports in Supabase/PlanetScale so repeat queries are instant and shareable via URL.
-
-3. **Source citations** — show which Tavily search result each claim comes from, with clickable links. Critical for credibility.
-
-4. **Multi-company comparison** — side-by-side scoring of 2-3 companies in the same sector.
-
-5. **Better Indian market coverage** — dedicated Screener.in and Moneycontrol scrapers for BSE/NSE listed companies, which Tavily sometimes misses.
-
-6. **Confidence calibration** — back-test verdicts against actual 1-year returns to tune the scoring rubric empirically.
-
-7. **PDF export** — downloadable report with a polished template for sharing.
-
-8. **Rate limiting and auth** — essential before any public deployment.
-
-9. **Portfolio mode** — build a watchlist, track verdict changes over time, get alerts.
-
-10. **LLM cost optimisation** — use a cheaper model for Chain 1 (summarisation) and a stronger model only for Chain 2 (synthesis).
+1. **Restore LangGraph state machine** — a proper ReAct agent that dynamically decides how many searches to run and can follow up on findings
+2. **Source citations** — show which Tavily result each claim comes from with clickable links
+3. **Rate limit handling** — detect Groq 429 errors and show "Please wait 30 seconds" instead of hanging
+4. **Persistent report caching** — store reports in Supabase so repeat queries are instant and shareable via URL
+5. **Better Indian market coverage** — dedicated Screener.in and Moneycontrol scrapers for BSE/NSE companies
+6. **Multi-company comparison** — side-by-side scoring of 2-3 companies in the same sector
+7. **PDF export** — downloadable polished report for sharing
+8. **Portfolio mode** — build a watchlist, track verdict changes over time
+9. **Confidence calibration** — back-test verdicts against actual 1-year returns to tune scoring
+10. **Authentication and rate limiting** — essential before any public production deployment
 
 ---
 
@@ -260,9 +240,9 @@ SSE gives live step-by-step progress updates to the UI. A 25-second wait feels f
 |---|---|
 | Frontend | Next.js 14 (App Router), React 18, Tailwind CSS |
 | Backend | Next.js API Routes, Server-Sent Events |
-| AI Orchestration | LangChain.js (chains, tools, parsers) |
+| AI Orchestration | LangChain.js (RunnableSequence, PromptTemplate, JsonOutputParser) |
 | LLM | Groq Llama 3.3 70B / OpenAI GPT-4o / Anthropic Claude |
-| Web Search | LangChain TavilySearchResults tool |
+| Web Search | Tavily API (live 2024/2025 data) |
 | Deployment | Vercel |
 
 ---
