@@ -18,6 +18,26 @@ AlphaSignal is a full-stack AI investment research agent built with **Next.js**,
 5. **Streams progress live** to the UI via Server-Sent Events
 
 ---
+## Understanding the Verdicts
+
+AlphaSignal delivers one of three verdicts for every company analysed:
+
+| Verdict | Meaning | Confidence Score |
+|---|---|---|
+| 🟢 **INVEST** | Strong fundamentals, reasonable valuation, clear upside — buy | 65–100 |
+| 🟡 **HOLD** | Decent business but mixed signals — don't buy more, don't sell | 40–65 |
+| 🔴 **PASS** | Weak fundamentals, overvalued, or serious concerns — avoid | 0–45 |
+
+### What each verdict means in practice
+
+**INVEST** — The agent found strong fundamentals, a clear competitive moat, and reasonable valuation. Catalysts outweigh risks. Example: *Nvidia (85)* — dominant AI chip market position, 114% revenue growth, strong margins.
+
+**HOLD** — The company is good but either too expensive, facing near-term uncertainty, or has mixed signals. Example: *Netflix (60)* — strong subscriber growth and margins, but P/E of 55x is expensive relative to peers and content cost inflation is an ongoing headwind.
+
+**PASS** — Clear reasons to avoid. Either bankruptcy, fraud, deep losses with no recovery path, or fundamentally broken business model. Example: *WeWork (20)* — filed Chapter 11 bankruptcy in 2023, structural lease liability crisis, governance failure.
+
+> The confidence score (0–100) reflects how strongly the agent feels about its verdict. A score of 85 INVEST is a strong buy signal. A score of 55 INVEST is a cautious positive view.
+
 
 ## How to Run
 
